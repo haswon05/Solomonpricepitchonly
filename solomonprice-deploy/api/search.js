@@ -50,6 +50,9 @@ function put(keys, v) {
 }
 const out = (v, extra) => ({ ...v, offers: strip(v.offers), used: strip(v.used), ...extra });
 
+// Google Shopping finds far more for "Samsung Galaxy S24" than for "galaxy s24": add the obvious brand to the Google query only (free).
+const BRANDS = [[/\bgalaxy\b/i, 'samsung'], [/\biphone\b/i, 'apple'], [/\bmacbook\b/i, 'apple'], [/\bpixel\b/i, 'google'], [/\bredmi\b/i, 'xiaomi']];
+const withBrand = q => { const b = BRANDS.find(([re, n]) => re.test(q) && !new RegExp('\\b' + n + '\\b', 'i').test(q)); return b ? b[1] + ' ' + q : q; };
 const wantAz = v => process.env.AMAZON_LOOKUP !== 'off' && v.offers.length > 0 && !v.offers.some(o => pri(o.store) === 2);
 
 // --- step 1: AI -> Google Shopping ---
@@ -67,13 +70,14 @@ async function search(raw, k0) {
   const key = norm(query), c = get(key);
   if (c) { put([k0], c); return { code: 200, body: out(c, { cached: true }) }; }   // the AI fixed it to something we already have
   if (!spend(1)) return { code: 429, body: { error: 'limit' } };
-  const v = build(await fetchShopping(query), query, cat);
+  const items = await fetchShopping(withBrand(query)), v = build(items, query, cat);
+  if (!v.offers.length && !v.used.length) console.log('no usable result for "' + query + '": Google returned', items.length, 'listings:', items.slice(0, 6).map(i => i.source + ' | ' + String(i.title).slice(0, 60) + ' | ' + i.extracted_price).join(' ;; '));
   if (process.env.USED_SEARCH === '1' && !v.used.length && spend(1)) {   // optional: one extra search for used/refurbished listings
     try { const u = build(await fetchShopping('refurbished ' + query), query, cat); if (u.used.length) v.used = u.used; } catch (e) {}
   }
   v.query = query; v.ai = ai; v.cat = cat;
   v.linked = !v.offers.some(o => o.token) && !wantAz(v);   // nothing left to resolve or look up means it is already final
-  put([k0, key], v);
+  if (v.offers.length || v.used.length) put([k0, key], v);   // an empty answer is not cached, so a retry can succeed
   return { code: 200, body: out(v) };
 }
 
