@@ -85,7 +85,7 @@ const cl=(t,d)=>{try{if(typeof clarity!=='function')return;d=d||{};clarity('even
  else if(t==='noresult')clarity('set','no_result','yes');
  else if(t==='error')clarity('set','error',String(d.code||'unknown'))}catch(e){}};
 const ev=(t,d)=>{try{navigator.sendBeacon('/api/event',new Blob([JSON.stringify({sid:SID,type:t,data:d})],{type:'application/json'}))}catch(e){}cl(t,d)};
-const mem=(k,v)=>{try{if(v===undefined)return JSON.parse(sessionStorage.getItem('bw:'+k));sessionStorage.setItem('bw:'+k,JSON.stringify(v))}catch(e){return null}};
+const mem=(k,v)=>{try{if(v===undefined)return JSON.parse(sessionStorage.getItem('sp2:'+k));sessionStorage.setItem('sp2:'+k,JSON.stringify(v))}catch(e){return null}};
 let snap={items:{}};
 const DEF=['Samsung Galaxy S25 256GB','iPhone 16 128GB','OnePlus 13R','Cetaphil Gentle Skin Cleanser'];
 function chips(){const l=Object.values(snap.items||{}).filter(x=>x.q&&x.offers&&x.offers.length).map(x=>x.q);
